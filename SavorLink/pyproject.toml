@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "SavorLink"
+version = "0.1.0"
+description = "Backend API for a B2B marketplace connecting suppliers and restaurants with catalog and order management features."
+authors = ["Zemine Ablyazova <ablyazova.z.i23@gmail.com>", "Ashirova Adile <ashirova.a.i.23@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "backend" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.111.1"
+uvicorn = {extras = ["standard"], version = "^0.23.2"}
+sqlalchemy = "^2.0.22"
+asyncpg = "^0.28.0"
+alembic = "^1.12.0"
+python-dotenv = "^1.0.0"
+email-validator = "^2.0.0"
+psycopg2-binary = "^2.9.11"
+argon2-cffi = "^25.1.0"
+bcrypt = "^4.3.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.4.0"
+black = "^24.9.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.15.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

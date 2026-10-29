@@ -1,0 +1,256 @@
+// ENUMS
+
+enum UserRole {
+  ADMIN,
+  BUYER,
+  SUPPLIER
+}
+
+enum OrderStatus {
+  DRAFT,
+  CREATED,
+  CONFIRMED,
+  SENT,
+  DELIVERED,
+  ACCEPTED,
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING,
+  PAID,
+  FAILED,
+  REFUNDED
+}
+
+enum DocumentType {
+  INVOICE,
+  CONTRACT,
+  ACT
+}
+
+enum ReviewTarget {
+  ENTERPRISE,
+  PRODUCT
+}
+
+// ENTERPRISE 
+
+entity Enterprise {
+
+  fullName String required
+  shortName String required
+
+  inn String required
+  kpp String
+  ogrn String required
+  registrationDate LocalDate
+
+  legalAddress String required
+  postalAddress String
+
+  phone String
+  email String
+  region String
+
+  directorFullName String required
+  directorBasis String
+
+  rating Double
+  createdAt Instant
+}
+
+// USERS 
+
+entity User {
+  email String required unique
+  passwordHash String required
+  role UserRole required
+  createdAt Instant required
+}
+
+relationship ManyToOne {
+  User{enterprise required} to Enterprise
+}
+
+// BANK DETAILS
+
+entity BankDetails {
+  settlementAccount String required
+  correspondentAccount String
+  bankName String required
+  bik String required
+}
+
+relationship OneToOne {
+  Enterprise{bankDetails} to BankDetails{enterprise required}
+}
+
+// PRODUCTS
+
+entity Product {
+  name String required
+  description Text
+  price BigDecimal required
+  minOrderQty Integer
+  quantityinstock Integer
+  sertificate String
+  isActive Boolean required
+}
+
+relationship ManyToOne {
+  Product{enterprise required} to Enterprise
+}
+
+// FAVORITES
+
+entity Favorite {
+  createdAt Instant required
+}
+
+relationship ManyToOne {
+  Favorite{user required} to User
+  Favorite{product required} to Product
+}
+
+// ORDERS
+
+entity Order {
+  status OrderStatus required
+  totalAmount BigDecimal
+  createdAt Instant required
+}
+
+entity OrderItem {
+  quantity Integer required
+  price BigDecimal required
+}
+
+relationship ManyToOne {
+  Order{buyerEnterprise required} to Enterprise
+  Order{sellerEnterprise required} to Enterprise
+}
+
+relationship OneToMany {
+  Order{items} to OrderItem{order required}
+}
+
+relationship ManyToOne {
+  OrderItem{product required} to Product
+}
+
+// ORDER TEMPLATES
+
+entity OrderTemplate {
+  name String required
+  createdAt Instant required
+}
+
+entity OrderTemplateItem {
+  quantity Integer required
+}
+
+relationship ManyToOne {
+  OrderTemplate{enterprise required} to Enterprise
+}
+
+relationship OneToMany {
+  OrderTemplate{items} to OrderTemplateItem{template required}
+}
+
+relationship ManyToOne {
+  OrderTemplateItem{product required} to Product
+}
+
+// PAYMENTS
+
+entity Payment {
+  amount BigDecimal required
+  status PaymentStatus required
+  createdAt Instant required
+}
+
+relationship OneToOne {
+  Order{payment} to Payment{order required}
+}
+
+// DOCUMENTS
+
+entity Document {
+  type DocumentType required
+  fileUrl String required
+  createdAt Instant required
+}
+
+relationship ManyToOne {
+  Document{order required} to Order
+}
+
+// REVIEWS
+
+entity Review {
+  rating Integer required
+  comment Text
+  target ReviewTarget required
+  createdAt Instant required
+}
+
+relationship ManyToOne {
+  Review{authorEnterprise required} to Enterprise
+  Review{targetEnterprise} to Enterprise
+  Review{product} to Product
+}
+
+// CHAT
+
+entity Chat {
+  createdAt Instant required
+}
+
+entity Message {
+  content Text required
+  createdAt Instant required
+  isRead Boolean required
+}
+
+relationship ManyToOne {
+  Chat{order required} to Order
+}
+
+relationship OneToMany {
+  Chat{messages} to Message{chat required}
+}
+
+relationship ManyToOne {
+  Message{sender required} to User
+}
+
+// ORDER ACCEPTANCE
+
+entity OrderAcceptance {
+  accepted Boolean required
+  defects Text
+  acceptedAt Instant
+}
+
+relationship OneToOne {
+  Order{acceptance} to OrderAcceptance{order required}
+}
+
+// NOTIFICATIONS (BADGES)
+
+entity NotificationCounter {
+  newOrders Integer
+  newMessages Integer
+  newStatuses Integer
+}
+
+relationship OneToOne {
+  User{notificationCounter} to NotificationCounter{user required}
+}
+
+// GLOBAL OPTIONS
+
+paginate Order, Product, Enterprise with pagination
+dto * with mapstruct
+service * with serviceClass

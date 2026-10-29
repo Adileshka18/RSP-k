@@ -1,0 +1,67 @@
+# ────── Твоя ветка ──────
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# секреты и локальные настройки
+.env
+.env.*
+!.env.example
+!.env.docker.example
+.env.docker
+
+# docker локальные оверрайды
+docker-compose.override.yml
+docker-compose.local.yml
+
+# редактор
+.vscode/
+.idea/
+
+# poetry (если используешь глобальные настройки)
+poetry.toml
+
+# ────── master ──────
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+*.tsbuildinfo
+
+.eslintcache
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# Vitest
+__screenshots__/
+
+# Vite
+*.timestamp-*-*.mjs
+
+savorlink.sql

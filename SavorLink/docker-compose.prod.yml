@@ -1,54 +1,67 @@
+name: savorlink-rsp-prod
+
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
-    container_name: savorlink-postgres-prod
+    container_name: savorlink-rsp-db-prod
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "1111"
-      POSTGRES_DB: SavorLink
-    ports:
-      - "5440:5432"
+      POSTGRES_USER: ${DB_USER:?Задайте DB_USER в .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Задайте DB_PASSWORD в .env}
+      POSTGRES_DB: ${DB_NAME:?Задайте DB_NAME в .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d SavorLink"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
-  backend:
+  migrate:
+    image: migrate/migrate:v4.17.1
+    volumes:
+      - ./migrations:/migrations:ro
+    entrypoint:
+      - migrate
+      - -path=/migrations
+      - -database=postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable
+    command: ["up"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: savorlink-backend-prod
+    container_name: savorlink-rsp-app-prod
+    env_file: .env
     environment:
-      BACKEND_HOST: 0.0.0.0
-      BACKEND_PORT: 8002
+      DB_HOST: db
+      DB_PORT: "5432"
       BACKEND_RELOAD: "false"
-      BACKEND_LOG_LEVEL: info
-      DATABASE_URL: postgresql+asyncpg://postgres:1111@postgres:5432/SavorLink
-      AUTH_TOKEN_SECRET: change-me-in-production
-      AUTH_TOKEN_TTL_SECONDS: 604800
     ports:
       - "8002:8002"
-    command: sh -c "alembic -c alembic.ini upgrade head && python -m backend.main"
+    command: python -m backend.main
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: savorlink-frontend-prod
+    container_name: savorlink-rsp-frontend-prod
     environment:
       VITE_API_BASE_URL: http://localhost:8002
-      VITE_DEV_PROXY_TARGET: http://backend:8002
+      VITE_DEV_PROXY_TARGET: http://app:8002
     ports:
       - "5173:5173"
     command: sh -c "npm run build && npm run preview -- --host 0.0.0.0 --port 5173"
     depends_on:
-      - backend
+      - app
 
 volumes:
   postgres_data:

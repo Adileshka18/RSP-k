@@ -10,17 +10,39 @@ SavorLink - это B2B-маркетплейс для поставщиков и �
 
 ## Быстрый старт
 
-Запустить весь стек через Docker:
+1. Создать `.env` из шаблона и задать пароль БД:
 
-```bash
-docker compose up --build
-```
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Запустить стек (`db` → `migrate` → `app`):
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   Фронтенд запускается отдельно: `docker compose --profile frontend up -d`.
 
 После запуска:
 
-- Фронтенд: http://localhost:5173
-- Документация backend: http://localhost:8002/docs
+- Документация backend: http://localhost:8082/docs
+- Проверка здоровья: http://localhost:8082/health (503, если БД недоступна)
 - PostgreSQL: localhost:5440
+- Фронтенд (с профилем `frontend`): http://localhost:5173
+
+## Миграции
+
+SQL-миграции лежат в `migrations/` и применяются сервисом `migrate` ([golang-migrate](https://github.com/golang-migrate/migrate)) перед стартом `app`.
+
+```bash
+docker compose run --rm migrate version   # текущая версия
+docker compose run --rm migrate down 1    # откатить последнюю миграцию
+docker compose run --rm migrate up        # применить все миграции
+docker compose restart app                # после отката/повторного применения
+```
+
+Данные хранятся в именованном томе `postgres_data` и переживают `docker compose down`. Удаляет их только `docker compose down -v`.
 
 ## Рабочий сценарий
 
@@ -74,7 +96,8 @@ pytest backend/tests/test_api_smoke.py
 ## Примечания
 
 - Текущий Docker-стек использует PostgreSQL на порту `5440`.
-- Контейнер backend выполняет миграции перед стартом приложения.
+- Подключение к БД настраивается переменными `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_MAX_CONNS` (см. `.env.example`); без обязательных backend не запускается.
+- Схемой БД управляют SQL-миграции из `migrations/`; папка Alembic осталась от прежней версии и в Docker-стеке не используется.
 - API теперь в основном живет в `backend/modules/*`; старые переходные обвязки удалены из основного пути запуска.
 
 ## Admin Account Bootstrap

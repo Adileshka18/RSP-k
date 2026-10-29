@@ -1,15 +1,33 @@
-import os
+import sys
 
-from backend.app import app
+from backend.core.config import (
+    ConfigError,
+    get_backend_host,
+    get_backend_log_level,
+    get_backend_port,
+    get_backend_reload,
+    get_db_config,
+)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    # Проверяем конфигурацию до старта сервера, чтобы упасть сразу и с понятным текстом,
+    # а не с трассировкой из глубины uvicorn.
+    try:
+        get_db_config()
+    except ConfigError as exc:
+        sys.exit(f"Ошибка конфигурации: {exc}")
+
     import uvicorn
 
     uvicorn.run(
         "backend.app:app",
-        host=os.getenv("BACKEND_HOST", "0.0.0.0"),
-        port=int(os.getenv("BACKEND_PORT", "8002")),
-        reload=os.getenv("BACKEND_RELOAD", "true").lower() == "true",
-        log_level=os.getenv("BACKEND_LOG_LEVEL", "info"),
+        host=get_backend_host(),
+        port=get_backend_port(),
+        reload=get_backend_reload(),
+        log_level=get_backend_log_level(),
     )
+
+
+if __name__ == "__main__":
+    main()

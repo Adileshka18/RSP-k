@@ -6,9 +6,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
-from backend.database.session import engine
+from backend.database.session import engine, is_database_available, wait_for_database
 from backend.modules.auth.router import router as auth_router
 from backend.modules.cart.router import router as cart_router
 from backend.modules.chats.router import router as chats_router
@@ -34,9 +34,7 @@ async def lifespan(app: FastAPI):
     logger.info("Запуск API SavorLink...")
 
     try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-            await conn.commit()
+        await wait_for_database()
     except Exception as exc:
         logger.exception("Не удалось подключиться к базе данных")
         raise RuntimeError("Не удалось подключиться к базе данных при запуске приложения") from exc
@@ -82,6 +80,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+@app.exception_handler(IntegrityError)
+async def integrity_exception_handler(request: Request, exc: IntegrityError):
+    # Сработало ограничение БД (UNIQUE, CHECK, FOREIGN KEY) — это ошибка данных, а не сервера
+    logger.warning("Нарушено ограничение целостности: %s", exc.orig)
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Операция нарушает ограничения целостности данных"},
+    )
+
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.exception("Непредвиденная ошибка при обработке запроса")
@@ -108,9 +116,14 @@ async def read_root():
 
 @app.get("/health")
 async def health_check():
-    return {
-        "status": "ok",
-        "service": "SavorLink API",
-        "version": "0.1.0",
-        "uptime": int(time.time() - START_TIME),
-    }
+    database_ok = await is_database_available()
+    return JSONResponse(
+        status_code=200 if database_ok else 503,
+        content={
+            "status": "ok" if database_ok else "unavailable",
+            "database": "ok" if database_ok else "unavailable",
+            "service": "SavorLink API",
+            "version": "0.1.0",
+            "uptime": int(time.time() - START_TIME),
+        },
+    )
